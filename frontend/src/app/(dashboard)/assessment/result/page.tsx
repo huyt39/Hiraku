@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import API_URL from "@/lib/api";
 
 interface AssessmentResult {
   result_id: string;
@@ -81,7 +82,7 @@ export default function AssessmentResultPage() {
   const fetchAISuggestion = async (r: AssessmentResult) => {
     setLoadingAI(true);
     try {
-      const res = await fetch("http://localhost:8000/api/ai/suggest", {
+      const res = await fetch(`${API_URL}/api/ai/suggest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,7 +122,7 @@ export default function AssessmentResultPage() {
     if (!result || !suggestion) return;
     setGeneratingRoadmap(true);
     try {
-      const res = await fetch("http://localhost:8000/api/roadmap/generate", {
+      const res = await fetch(`${API_URL}/api/roadmap/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

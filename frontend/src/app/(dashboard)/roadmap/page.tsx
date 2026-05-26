@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import API_URL from "@/lib/api";
 
 interface Phase {
   week: string;
@@ -64,7 +65,7 @@ export default function RoadmapPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/api/roadmap/student_001?domain=${domain}`);
+      const res = await fetch(`${API_URL}/api/roadmap/student_001?domain=${domain}`);
       if (res.ok) setRoadmap(await res.json());
     } catch { setRoadmap(buildFallback(domain)); }
     finally { setLoading(false); }

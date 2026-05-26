@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import API_URL from "@/lib/api";
 
 const QUESTIONS = [
   {
@@ -140,7 +141,7 @@ export default function AssessmentPage() {
           answer: ans,
         })),
       };
-      const res = await fetch("http://localhost:8000/api/assessment/submit", {
+      const res = await fetch(`${API_URL}/api/assessment/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -178,7 +179,7 @@ export default function AssessmentPage() {
     <div className="page-content fade-in">
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div style={{ display: "flex", align: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
             fontSize: 11, fontWeight: 700, color, textTransform: "uppercase",
             letterSpacing: 1, padding: "3px 10px", borderRadius: 20,

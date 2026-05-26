@@ -1,0 +1,84 @@
+# ─── OS ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ─── Editor / IDE ─────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# ═══════════════════════════════════════════════════════
+# BACKEND  (Python / FastAPI)
+# ═══════════════════════════════════════════════════════
+
+# Virtual environment
+backend/venv/
+backend/.venv/
+backend/env/
+
+# Python cache
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+
+# Env files (keep .env.example, ignore real secrets)
+backend/.env
+# backend/.env.example  ← committed intentionally
+
+# Pytest / coverage
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+backend/coverage.xml
+
+# Build / dist
+backend/dist/
+backend/build/
+backend/*.egg-info/
+
+# ═══════════════════════════════════════════════════════
+# FRONTEND  (Next.js / Node)
+# ═══════════════════════════════════════════════════════
+
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+
+# Build output
+frontend/.next/
+frontend/out/
+frontend/dist/
+
+# Env files
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+# frontend/.env.example  ← committed intentionally
+
+# Debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# TypeScript build info
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# ─── Misc ─────────────────────────────────────────────
+*.log
+*.tmp
+.cache/
