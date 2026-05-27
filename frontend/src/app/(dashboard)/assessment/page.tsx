@@ -195,9 +195,8 @@ export default function AssessmentPage() {
       <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2, marginBottom: 28, overflow: "hidden" }}>
         <div style={{
           height: "100%", borderRadius: 2, transition: "width 0.4s ease",
-          background: `linear-gradient(90deg, ${color}, ${color}bb)`,
+          background: color,
           width: `${progress}%`,
-          boxShadow: `0 0 8px ${color}66`,
         }} />
       </div>
 
@@ -205,7 +204,7 @@ export default function AssessmentPage() {
       <div className="card" style={{ maxWidth: 740, margin: "0 auto", padding: "28px 32px" }}>
         {q.hint && (
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-            <span>☑</span> {q.hint}
+            {q.hint}
           </div>
         )}
         <h2 style={{ fontSize: 21, fontWeight: 700, marginBottom: 24, lineHeight: 1.45 }}>
@@ -226,7 +225,7 @@ export default function AssessmentPage() {
                   borderRadius: 10, cursor: "pointer", textAlign: "left",
                   transition: "all 0.18s", color: sel ? color : "var(--text-primary)",
                   fontSize: 14, fontWeight: sel ? 600 : 400,
-                  boxShadow: sel ? `0 0 0 1px ${color}44` : "none",
+                  boxShadow: "none",
                 }}
               >
                 {/* Checkbox / Radio indicator */}
@@ -239,7 +238,7 @@ export default function AssessmentPage() {
                 }}>
                   {sel && (
                     <span style={{ color: "white", fontSize: isMulti ? 11 : 8, fontWeight: 800 }}>
-                      {isMulti ? "✓" : "●"}
+                      {isMulti ? "" : ""}
                     </span>
                   )}
                 </span>
@@ -257,7 +256,7 @@ export default function AssessmentPage() {
             disabled={current === 0}
             style={{ opacity: current === 0 ? 0.3 : 1 }}
           >
-            ← Previous
+            Previous
           </button>
 
           {/* Dot progress */}
@@ -280,15 +279,15 @@ export default function AssessmentPage() {
             disabled={!hasAnswer || submitting}
             style={{
               opacity: !hasAnswer || submitting ? 0.45 : 1,
-              background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-              boxShadow: hasAnswer ? `0 4px 16px ${color}44` : "none",
+              background: color,
+              boxShadow: "none",
             }}
           >
             {submitting
               ? "Đang phân tích..."
               : current === QUESTIONS.length - 1
-              ? "Hoàn thành ✓"
-              : "Tiếp theo →"}
+              ? "Hoàn thành"
+              : "Tiếp theo"}
           </button>
         </div>
       </div>
@@ -297,10 +296,9 @@ export default function AssessmentPage() {
       <div style={{
         maxWidth: 740, margin: "18px auto 0", padding: "12px 18px",
         background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.18)",
-        borderRadius: 10, fontSize: 13, color: "var(--text-secondary)",
+          borderRadius: 10, fontSize: 13, color: "var(--text-secondary)",
         display: "flex", gap: 8, alignItems: "center",
       }}>
-        <span>💡</span>
         Kết quả sẽ được so sánh với yêu cầu thị trường IT và dùng AI để đề xuất định hướng phù hợp nhất cho bạn.
       </div>
     </div>

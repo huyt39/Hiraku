@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import API_URL from "@/lib/api";
 
@@ -36,9 +36,9 @@ const DOMAIN_TABS = [
 ];
 
 const STATUS_META = {
-  completed:   { label: "Hoàn thành", color: "var(--accent-green)", dot: "✓" },
-  in_progress: { label: "Đang học",   color: "var(--accent-purple)", dot: "⟳" },
-  upcoming:    { label: "Sắp tới",    color: "var(--text-muted)", dot: "○" },
+  completed:   { label: "Hoàn thành", color: "var(--accent-green)", dot: "" },
+  in_progress: { label: "Đang học",   color: "var(--accent-purple)", dot: "" },
+  upcoming:    { label: "Sắp tới",    color: "var(--text-muted)", dot: "" },
 };
 
 export default function RoadmapPage() {
@@ -46,32 +46,9 @@ export default function RoadmapPage() {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
+  const [savingPhase, setSavingPhase] = useState<number | null>(null);
 
-  useEffect(() => { fetchRoadmap(activeDomain); }, [activeDomain]);
-
-  const fetchRoadmap = async (domain: string) => {
-    setLoading(true);
-    setRoadmap(null);
-
-    // Try sessionStorage first (freshly generated from result page)
-    const cached = sessionStorage.getItem("my_roadmap");
-    if (cached) {
-      const parsed: Roadmap = JSON.parse(cached);
-      if (parsed.domain === domain) {
-        setRoadmap(parsed);
-        setLoading(false);
-        return;
-      }
-    }
-
-    try {
-      const res = await fetch(`${API_URL}/api/roadmap/student_001?domain=${domain}`);
-      if (res.ok) setRoadmap(await res.json());
-    } catch { setRoadmap(buildFallback(domain)); }
-    finally { setLoading(false); }
-  };
-
-  const buildFallback = (domain: string): Roadmap => {
+  function buildFallback(domain: string): Roadmap {
     const templates: Record<string, { title: string; color: string; phases: Omit<Phase, "status"|"phase_index">[] }> = {
       web: {
         title: "Web Developer Roadmap", color: "#6C63FF",
@@ -124,6 +101,49 @@ export default function RoadmapPage() {
       style_tip: "Kết hợp lý thuyết và thực hành đều đặn mỗi ngày.",
       next_update_at: new Date(Date.now() + 14 * 864e5).toISOString(),
     };
+  }
+
+  const fetchRoadmap = useCallback(async (domain: string) => {
+    setLoading(true);
+    setRoadmap(null);
+
+    // Try sessionStorage first (freshly generated from result page)
+    const cached = sessionStorage.getItem("my_roadmap");
+    if (cached) {
+      const parsed: Roadmap = JSON.parse(cached);
+      if (parsed.domain === domain) {
+        setRoadmap(parsed);
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/roadmap/student_001?domain=${domain}`);
+      if (res.ok) setRoadmap(await res.json());
+    } catch { setRoadmap(buildFallback(domain)); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { Promise.resolve().then(() => fetchRoadmap(activeDomain)); }, [activeDomain, fetchRoadmap]);
+
+  const updatePhase = async (phaseIndex: number, completed: boolean) => {
+    if (!roadmap || roadmap.id === "fallback") return;
+    setSavingPhase(phaseIndex);
+    try {
+      const res = await fetch(`${API_URL}/api/roadmap/progress/${roadmap.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase_index: phaseIndex, completed }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setRoadmap(updated);
+        sessionStorage.setItem("my_roadmap", JSON.stringify(updated));
+      }
+    } finally {
+      setSavingPhase(null);
+    }
   };
 
   const activeTab = DOMAIN_TABS.find(t => t.key === activeDomain)!;
@@ -147,18 +167,17 @@ export default function RoadmapPage() {
             background: activeDomain === tab.key ? tab.color : "rgba(255,255,255,0.05)",
             border: `1px solid ${activeDomain === tab.key ? tab.color : "rgba(255,255,255,0.1)"}`,
             color: activeDomain === tab.key ? "white" : "var(--text-secondary)",
-            boxShadow: activeDomain === tab.key ? `0 4px 16px ${tab.color}44` : "none",
+            boxShadow: "none",
             transition: "all 0.2s",
           }}>{tab.label}</button>
         ))}
         <Link href="/assessment" className="btn btn-outline" style={{ marginLeft: "auto", fontSize: 12, padding: "10px 16px" }}>
-          ↺ Làm lại Assessment
+          Làm lại Assessment
         </Link>
       </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "var(--text-secondary)" }}>
-          <div style={{ fontSize: 32, marginBottom: 12, animation: "pulse 1.5s infinite" }}>⟳</div>
           Đang tải roadmap...
         </div>
       ) : roadmap ? (
@@ -174,13 +193,13 @@ export default function RoadmapPage() {
               </div>
             </div>
             <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 3, marginBottom: 24, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${roadmap.progress_pct}%`, background: color, borderRadius: 3, transition: "width 1s ease", boxShadow: `0 0 10px ${color}66` }} />
+              <div style={{ height: "100%", width: `${roadmap.progress_pct}%`, background: color, borderRadius: 3, transition: "width 1s ease" }} />
             </div>
 
             {/* Style tip */}
             {roadmap.style_tip && (
               <div style={{ marginBottom: 20, padding: "10px 14px", background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 8, fontSize: 13, color: "var(--text-secondary)", display: "flex", gap: 8 }}>
-                <span>💡</span>{roadmap.style_tip}
+                {roadmap.style_tip}
               </div>
             )}
 
@@ -201,7 +220,7 @@ export default function RoadmapPage() {
                         border: `2px solid ${phase.status === "upcoming" ? "rgba(255,255,255,0.15)" : "transparent"}`,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 10, color: "white", fontWeight: 800,
-                        boxShadow: phase.status === "in_progress" ? `0 0 12px ${color}88` : "none",
+                        boxShadow: "none",
                       }}>{sm.dot}</div>
                       {!isLast && <div style={{ width: 2, flex: 1, minHeight: 32, background: phase.status === "completed" ? "var(--accent-green)" : "rgba(255,255,255,0.07)", marginTop: 2 }} />}
                     </div>
@@ -219,7 +238,7 @@ export default function RoadmapPage() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
                           <span style={{ fontSize: 11, fontWeight: 600, color: sm.color, padding: "2px 8px", background: `${sm.color}18`, borderRadius: 20 }}>{sm.label}</span>
-                          <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{isExpanded ? "▲" : "▼"}</span>
+                          <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{isExpanded ? "Thu gọn" : "Chi tiết"}</span>
                         </div>
                       </button>
 
@@ -236,16 +255,38 @@ export default function RoadmapPage() {
                           </div>
                           <div style={{ marginBottom: 8 }}>
                             <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>OUTPUT</span>
-                            <div style={{ fontSize: 13, color: "var(--accent-green)", marginTop: 3 }}>📦 {phase.output}</div>
+                            <div style={{ fontSize: 13, color: "var(--accent-green)", marginTop: 3 }}>{phase.output}</div>
                           </div>
                           <div>
                             <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>TÀI LIỆU</span>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
                               {phase.resources.map(r => (
-                                <span key={r} style={{ fontSize: 11, padding: "2px 8px", background: "rgba(255,255,255,0.07)", borderRadius: 6, color: "var(--text-secondary)" }}>🔗 {r}</span>
+                                <span key={r} style={{ fontSize: 11, padding: "2px 8px", background: "rgba(255,255,255,0.07)", borderRadius: 6, color: "var(--text-secondary)" }}>{r}</span>
                               ))}
                             </div>
                           </div>
+                          {roadmap.id !== "fallback" && (
+                            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => updatePhase(i, true)}
+                                disabled={savingPhase === i || phase.status === "completed"}
+                                style={{ padding: "8px 12px", fontSize: 12, opacity: savingPhase === i || phase.status === "completed" ? 0.5 : 1, background: "var(--accent-green)" }}
+                              >
+                                {savingPhase === i ? "Đang lưu..." : "Đánh dấu hoàn thành"}
+                              </button>
+                              {phase.status === "completed" && (
+                                <button
+                                  className="btn btn-outline"
+                                  onClick={() => updatePhase(i, false)}
+                                  disabled={savingPhase === i}
+                                  style={{ padding: "8px 12px", fontSize: 12 }}
+                                >
+                                  Đưa về đang học
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -259,7 +300,7 @@ export default function RoadmapPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Next milestone */}
             <div className="card" style={{ background: `${color}12`, border: `1px solid ${color}33` }}>
-              <div style={{ fontSize: 11, color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🎯 Milestone tiếp theo</div>
+              <div style={{ fontSize: 11, color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Milestone tiếp theo</div>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{roadmap.next_milestone}</div>
               <div style={{ height: 5, background: "rgba(255,255,255,0.07)", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${roadmap.progress_pct}%`, background: color, borderRadius: 3 }} />
@@ -269,23 +310,23 @@ export default function RoadmapPage() {
 
             {/* CV items */}
             <div className="card">
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📄 Items sẵn sàng cho CV</div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Items sẵn sàng cho CV</div>
               {roadmap.cv_items.length > 0 ? roadmap.cv_items.map((item) => (
                 <div key={item} style={{ display: "flex", gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: 13 }}>
-                  <span style={{ color: "var(--accent-green)" }}>✓</span>{item}
+                  {item}
                 </div>
               )) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Hoàn thành phase đầu tiên để có CV item!</div>}
             </div>
 
             {/* Skill gap summary */}
             <div className="card">
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📊 Khoảng cách kỹ năng</div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Khoảng cách kỹ năng</div>
               {Object.entries(roadmap.skill_gap).map(([d, gap]) => (
                 <div key={d} style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
                     <span style={{ textTransform: "capitalize" }}>{d}</span>
                     <span style={{ color: gap > 40 ? "var(--accent-red)" : gap > 20 ? "var(--accent-orange)" : "var(--accent-green)" }}>
-                      {gap > 0 ? `–${gap}` : "✓ Đạt"}
+                      {gap > 0 ? `-${gap}` : "Đạt"}
                     </span>
                   </div>
                   <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
@@ -297,12 +338,12 @@ export default function RoadmapPage() {
 
             {/* Update schedule */}
             <div className="card" style={{ background: "rgba(108,99,255,0.07)", border: "1px solid rgba(108,99,255,0.2)" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent-purple)", marginBottom: 8 }}>🔄 Cập nhật tiếp theo</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent-purple)", marginBottom: 8 }}>Cập nhật tiếp theo</div>
               <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
                 Roadmap tự động phân tích lại sau <strong style={{ color: "white" }}>2 tuần</strong> dựa trên tiến độ và feedback.
               </p>
               <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 6, fontSize: 12, color: "var(--text-secondary)" }}>
-                📅 {new Date(roadmap.next_update_at).toLocaleDateString("vi-VN")}
+                {new Date(roadmap.next_update_at).toLocaleDateString("vi-VN")}
               </div>
             </div>
           </div>

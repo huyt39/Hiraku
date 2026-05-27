@@ -8,12 +8,11 @@ const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  useEffect(() => {
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "light";
     const saved = localStorage.getItem("sb-theme") as Theme | null;
-    if (saved) setTheme(saved);
-  }, []);
+    return saved || "light";
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);

@@ -90,9 +90,9 @@ export default function ProjectsPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-secondary)" }}>
-              <span>⏱ {p.duration}</span>
-              <span style={{ color: "var(--border)" }}>•</span>
-              <span>👥 {p.enrolled} sinh viên</span>
+              <span>{p.duration}</span>
+              <span style={{ color: "var(--border)" }}>/</span>
+              <span>{p.enrolled} sinh viên</span>
             </div>
 
             <div style={{ padding: "10px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 8, border: "1px solid var(--border)", fontSize: 12 }}>
@@ -103,7 +103,7 @@ export default function ProjectsPage() {
             <button style={{ padding: "10px", background: p.color, border: "none", borderRadius: 8, color: "white", fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "opacity 0.2s" }}
               onMouseOver={e => (e.currentTarget.style.opacity = "0.85")}
               onMouseOut={e => (e.currentTarget.style.opacity = "1")}>
-              Bắt đầu ngay →
+              Bắt đầu ngay
             </button>
           </div>
         ))}
@@ -111,7 +111,6 @@ export default function ProjectsPage() {
 
       {filtered.length === 0 && (
         <div style={{ textAlign: "center", padding: 60, color: "var(--text-secondary)" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
           <p>Không tìm thấy project phù hợp</p>
         </div>
       )}

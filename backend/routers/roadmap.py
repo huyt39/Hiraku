@@ -4,7 +4,7 @@ Generate & store a roadmap personalized to the student's assessment result.
 Updates every 2-4 weeks based on progress.
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime, timedelta
 import uuid
@@ -135,6 +135,11 @@ class RoadmapRequest(BaseModel):
     learning_style: Optional[str] = ""
 
 
+class ProgressUpdateRequest(BaseModel):
+    phase_index: int = Field(..., ge=0)
+    completed: bool = True
+
+
 # ── Routes ──────────────────────────────────────────────────────────────────────
 
 @router.post("/generate")
@@ -149,6 +154,59 @@ async def generate_roadmap(req: RoadmapRequest):
     except Exception as e:
         print(f"MongoDB insert error: {e}")
 
+    doc["id"] = doc.pop("_id")
+    return doc
+
+
+@router.get("/templates/all")
+async def get_templates():
+    return {
+        "templates": [
+            {"domain": k, "title": v["title"], "color": v["color"], "total_phases": len(v["phases"])}
+            for k, v in ROADMAP_TEMPLATES.items()
+        ]
+    }
+
+
+@router.patch("/progress/{roadmap_id}")
+async def update_progress(roadmap_id: str, req: ProgressUpdateRequest):
+    """Update one phase status and recalculate progress, CV items, and next milestone."""
+    doc = await col_roadmaps().find_one({"_id": roadmap_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+
+    phases = doc.get("phases", [])
+    if req.phase_index >= len(phases):
+        raise HTTPException(status_code=422, detail="phase_index out of range")
+
+    phases[req.phase_index]["status"] = "completed" if req.completed else "in_progress"
+    for i, phase in enumerate(phases):
+        if i < req.phase_index and req.completed:
+            phase["status"] = "completed"
+        elif i > req.phase_index and not req.completed and phase["status"] == "completed":
+            phase["status"] = "upcoming"
+
+    if req.completed:
+        next_phase = next((p for p in phases if p["status"] != "completed"), None)
+        if next_phase:
+            next_phase["status"] = "in_progress"
+    else:
+        for i, phase in enumerate(phases):
+            if i != req.phase_index and phase["status"] == "in_progress":
+                phase["status"] = "upcoming"
+
+    completed = [p for p in phases if p["status"] == "completed"]
+    in_progress = next((p for p in phases if p["status"] == "in_progress"), None)
+    progress_pct = round(len(completed) / len(phases) * 100) if phases else 0
+    updates = {
+        "phases": phases,
+        "progress_pct": progress_pct,
+        "cv_items": [p["output"] for p in completed],
+        "next_milestone": in_progress["topic"] if in_progress else "Roadmap hoàn thành!",
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+    await col_roadmaps().update_one({"_id": roadmap_id}, {"$set": updates})
+    doc.update(updates)
     doc["id"] = doc.pop("_id")
     return doc
 
@@ -173,13 +231,3 @@ async def get_roadmap(student_id: str, domain: str = "web"):
     )
     fallback["id"] = fallback.pop("_id")
     return fallback
-
-
-@router.get("/templates/all")
-async def get_templates():
-    return {
-        "templates": [
-            {"domain": k, "title": v["title"], "color": v["color"], "total_phases": len(v["phases"])}
-            for k, v in ROADMAP_TEMPLATES.items()
-        ]
-    }

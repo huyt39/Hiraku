@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Union
 from datetime import datetime
 import uuid
@@ -16,9 +16,9 @@ class AssessmentAnswer(BaseModel):
     answer: Union[str, List[str]]   # single or multi-select
 
 class AssessmentSubmission(BaseModel):
-    student_id: str
+    student_id: str = Field(..., min_length=1)
     name: str = "Anonymous"
-    answers: List[AssessmentAnswer]
+    answers: List[AssessmentAnswer] = Field(..., min_length=1)
 
 # ── Static question bank ────────────────────────────────────────────────────────
 
@@ -104,6 +104,36 @@ QUESTIONS = [
     },
 ]
 
+QUESTION_BY_ID = {q["id"]: q for q in QUESTIONS}
+
+
+def validate_submission_answers(answers: List[AssessmentAnswer]) -> None:
+    seen = set()
+    for item in answers:
+        question = QUESTION_BY_ID.get(item.question_id)
+        if not question:
+            raise HTTPException(status_code=422, detail=f"Unknown question_id: {item.question_id}")
+        if item.question_id in seen:
+            raise HTTPException(status_code=422, detail=f"Duplicate answer for question_id: {item.question_id}")
+        seen.add(item.question_id)
+
+        valid_options = set(question["options"])
+        if question["type"] == "single":
+            if not isinstance(item.answer, str) or item.answer not in valid_options:
+                raise HTTPException(status_code=422, detail=f"Invalid answer for question_id: {item.question_id}")
+        else:
+            if not isinstance(item.answer, list) or not item.answer:
+                raise HTTPException(status_code=422, detail=f"question_id {item.question_id} requires at least one selected option")
+            invalid = [opt for opt in item.answer if opt not in valid_options]
+            if invalid:
+                raise HTTPException(status_code=422, detail=f"Invalid option(s) for question_id {item.question_id}: {invalid}")
+            if "Chưa biết ngôn ngữ nào" in item.answer and len(item.answer) > 1:
+                raise HTTPException(status_code=422, detail="'Chưa biết ngôn ngữ nào' cannot be combined with other languages")
+
+    missing = sorted(set(QUESTION_BY_ID) - seen)
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing answers for question_id(s): {missing}")
+
 # ── Routes ──────────────────────────────────────────────────────────────────────
 
 @router.get("/questions")
@@ -120,6 +150,8 @@ async def get_market_requirements():
 
 @router.post("/submit")
 async def submit_assessment(submission: AssessmentSubmission):
+    validate_submission_answers(submission.answers)
+
     # Build answers dict: {question_id: answer}
     answers_dict = {str(a.question_id): a.answer for a in submission.answers}
 
