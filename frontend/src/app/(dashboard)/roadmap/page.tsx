@@ -41,6 +41,34 @@ const STATUS_META = {
   upcoming:    { label: "Sắp tới",    color: "var(--text-muted)", dot: "" },
 };
 
+const roadmapStorageKey = (domain: string) => `roadmap_progress_${domain}`;
+
+function recalculateRoadmap(base: Roadmap, phaseIndex: number, completed: boolean): Roadmap {
+  const phases = base.phases.map((phase, index) => {
+    let status: Phase["status"] = "upcoming";
+    if (completed) {
+      if (index <= phaseIndex) status = "completed";
+      else if (index === phaseIndex + 1) status = "in_progress";
+    } else {
+      if (index < phaseIndex) status = "completed";
+      else if (index === phaseIndex) status = "in_progress";
+    }
+    return { ...phase, status };
+  });
+
+  const completedPhases = phases.filter((phase) => phase.status === "completed");
+  const inProgressPhase = phases.find((phase) => phase.status === "in_progress");
+  const progressPct = phases.length ? Math.round((completedPhases.length / phases.length) * 100) : 0;
+
+  return {
+    ...base,
+    phases,
+    progress_pct: progressPct,
+    cv_items: completedPhases.map((phase) => phase.output),
+    next_milestone: inProgressPhase?.topic || "Roadmap hoàn thành!",
+  };
+}
+
 export default function RoadmapPage() {
   const [activeDomain, setActiveDomain] = useState("web");
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
@@ -107,12 +135,20 @@ export default function RoadmapPage() {
     setLoading(true);
     setRoadmap(null);
 
+    const saved = localStorage.getItem(roadmapStorageKey(domain));
+    if (saved) {
+      setRoadmap(JSON.parse(saved));
+      setLoading(false);
+      return;
+    }
+
     // Try sessionStorage first (freshly generated from result page)
     const cached = sessionStorage.getItem("my_roadmap");
     if (cached) {
       const parsed: Roadmap = JSON.parse(cached);
       if (parsed.domain === domain) {
         setRoadmap(parsed);
+        localStorage.setItem(roadmapStorageKey(domain), JSON.stringify(parsed));
         setLoading(false);
         return;
       }
@@ -120,17 +156,35 @@ export default function RoadmapPage() {
 
     try {
       const res = await fetch(`${API_URL}/api/roadmap/student_001?domain=${domain}`);
-      if (res.ok) setRoadmap(await res.json());
-    } catch { setRoadmap(buildFallback(domain)); }
+      if (res.ok) {
+        const data = await res.json();
+        setRoadmap(data);
+        localStorage.setItem(roadmapStorageKey(domain), JSON.stringify(data));
+      } else {
+        const fallback = buildFallback(domain);
+        setRoadmap(fallback);
+        localStorage.setItem(roadmapStorageKey(domain), JSON.stringify(fallback));
+      }
+    } catch {
+      const fallback = buildFallback(domain);
+      setRoadmap(fallback);
+      localStorage.setItem(roadmapStorageKey(domain), JSON.stringify(fallback));
+    }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { Promise.resolve().then(() => fetchRoadmap(activeDomain)); }, [activeDomain, fetchRoadmap]);
 
   const updatePhase = async (phaseIndex: number, completed: boolean) => {
-    if (!roadmap || roadmap.id === "fallback") return;
+    if (!roadmap) return;
     setSavingPhase(phaseIndex);
+    const updatedLocal = recalculateRoadmap(roadmap, phaseIndex, completed);
+    setRoadmap(updatedLocal);
+    sessionStorage.setItem("my_roadmap", JSON.stringify(updatedLocal));
+    localStorage.setItem(roadmapStorageKey(updatedLocal.domain), JSON.stringify(updatedLocal));
+
     try {
+      if (roadmap.id === "fallback") return;
       const res = await fetch(`${API_URL}/api/roadmap/progress/${roadmap.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -140,6 +194,7 @@ export default function RoadmapPage() {
         const updated = await res.json();
         setRoadmap(updated);
         sessionStorage.setItem("my_roadmap", JSON.stringify(updated));
+        localStorage.setItem(roadmapStorageKey(updated.domain), JSON.stringify(updated));
       }
     } finally {
       setSavingPhase(null);
@@ -237,6 +292,26 @@ export default function RoadmapPage() {
                           <div style={{ fontSize: 14, fontWeight: 600, color: phase.status === "upcoming" ? "var(--text-secondary)" : "var(--text-primary)" }}>{phase.topic}</div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
+                          <label
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              fontSize: 12,
+                              color: "var(--text-secondary)",
+                              cursor: savingPhase === i ? "wait" : "pointer",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={phase.status === "completed"}
+                              disabled={savingPhase === i}
+                              onChange={(event) => updatePhase(i, event.target.checked)}
+                              style={{ width: 14, height: 14, accentColor: color }}
+                            />
+                            Hoàn thành
+                          </label>
                           <span style={{ fontSize: 11, fontWeight: 600, color: sm.color, padding: "2px 8px", background: `${sm.color}18`, borderRadius: 20 }}>{sm.label}</span>
                           <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{isExpanded ? "Thu gọn" : "Chi tiết"}</span>
                         </div>
@@ -265,28 +340,20 @@ export default function RoadmapPage() {
                               ))}
                             </div>
                           </div>
-                          {roadmap.id !== "fallback" && (
-                            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                              <button
-                                className="btn btn-primary"
-                                onClick={() => updatePhase(i, true)}
-                                disabled={savingPhase === i || phase.status === "completed"}
-                                style={{ padding: "8px 12px", fontSize: 12, opacity: savingPhase === i || phase.status === "completed" ? 0.5 : 1, background: "var(--accent-green)" }}
-                              >
-                                {savingPhase === i ? "Đang lưu..." : "Đánh dấu hoàn thành"}
-                              </button>
-                              {phase.status === "completed" && (
-                                <button
-                                  className="btn btn-outline"
-                                  onClick={() => updatePhase(i, false)}
-                                  disabled={savingPhase === i}
-                                  style={{ padding: "8px 12px", fontSize: 12 }}
-                                >
-                                  Đưa về đang học
-                                </button>
-                              )}
-                            </div>
-                          )}
+                          <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                            <button
+                              className={phase.status === "completed" ? "btn btn-outline" : "btn btn-primary"}
+                              onClick={() => updatePhase(i, phase.status !== "completed")}
+                              disabled={savingPhase === i}
+                              style={{ padding: "8px 12px", fontSize: 12, opacity: savingPhase === i ? 0.5 : 1 }}
+                            >
+                              {savingPhase === i
+                                ? "Đang lưu..."
+                                : phase.status === "completed"
+                                  ? "Đưa về đang học"
+                                  : "Đánh dấu hoàn thành"}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
