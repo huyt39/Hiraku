@@ -153,7 +153,6 @@ export default function DashboardPage() {
         </div>
         <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
           <Link href="/roadmap" className="btn btn-primary">Xem Roadmap</Link>
-          <Link href="/projects" className="btn btn-outline">Mini Projects</Link>
         </div>
       </div>
     </div>

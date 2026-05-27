@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/assessment", label: "Assessment" },
   { href: "/dashboard",  label: "Dashboard"  },
-  { href: "/projects",   label: "Mini Projects" },
   { href: "/roadmap",    label: "Roadmap"    },
   { href: "/market",     label: "Thị Trường IT" },
   { href: "/settings",   label: "Settings"   },
@@ -53,7 +52,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         ))}
 
         <span className="nav-section-label">Learning</span>
-        {navItems.slice(2, 5).map((item) => (
+        {navItems.slice(2, 4).map((item) => (
           <Link key={item.href} href={item.href} onClick={onClose}
             className={`nav-item ${pathname.startsWith(item.href) ? "active" : ""}`}>
             {item.label}
@@ -61,7 +60,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         ))}
 
         <span className="nav-section-label">System</span>
-        {navItems.slice(5).map((item) => (
+        {navItems.slice(4).map((item) => (
           <Link key={item.href} href={item.href} onClick={onClose}
             className={`nav-item ${pathname.startsWith(item.href) ? "active" : ""}`}>
             {item.label}

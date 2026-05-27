@@ -77,6 +77,37 @@ const MARKET_STATS = [
   { label: "Thiếu hụt nhân lực", value: "500K", color: "var(--accent-orange)" },
 ];
 
+const COMPANY_REFERENCES: Record<string, { name: string; roles: string[]; note: string }[]> = {
+  web: [
+    { name: "FPT Software", roles: ["Frontend Developer", "Backend Developer", "Full-stack Developer"], note: "Outsourcing, enterprise systems" },
+    { name: "VNG / Zalo", roles: ["Frontend Engineer", "Backend Engineer"], note: "Product, consumer platforms" },
+    { name: "MoMo", roles: ["Web Engineer", "Backend Engineer"], note: "Fintech, payment products" },
+    { name: "Shopee Vietnam", roles: ["Frontend Engineer", "Software Engineer"], note: "E-commerce, large-scale systems" },
+    { name: "Tiki", roles: ["Frontend Developer", "Full-stack Developer"], note: "E-commerce, marketplace" },
+  ],
+  ai: [
+    { name: "VinAI", roles: ["AI Engineer", "Machine Learning Engineer"], note: "Computer vision, NLP, applied AI" },
+    { name: "FPT.AI", roles: ["AI Engineer", "NLP Engineer"], note: "Conversational AI, automation" },
+    { name: "Viettel AI", roles: ["ML Engineer", "Data Scientist"], note: "AI platform, government and enterprise AI" },
+    { name: "Zalo AI", roles: ["AI Engineer", "Research Engineer"], note: "Speech, NLP, recommendation systems" },
+    { name: "MoMo", roles: ["ML Engineer", "Data Scientist"], note: "Fraud detection, personalization" },
+  ],
+  data: [
+    { name: "FPT Software", roles: ["Data Engineer", "BI Developer"], note: "Data platform, analytics projects" },
+    { name: "Viettel Digital", roles: ["Data Engineer", "Data Analyst"], note: "Digital products, analytics" },
+    { name: "MoMo", roles: ["Data Analyst", "Data Engineer"], note: "Fintech analytics, growth data" },
+    { name: "One Mount", roles: ["Data Analyst", "BI Analyst"], note: "Retail, loyalty, consumer data" },
+    { name: "Shopee Vietnam", roles: ["Business Intelligence Analyst", "Data Analyst"], note: "Marketplace operations and analytics" },
+  ],
+  devops: [
+    { name: "Viettel IDC", roles: ["Cloud Engineer", "System Engineer"], note: "Cloud infrastructure, data center" },
+    { name: "FPT Smart Cloud", roles: ["Cloud Engineer", "DevOps Engineer"], note: "Cloud services, platform operations" },
+    { name: "CMC Telecom", roles: ["DevOps Engineer", "Infrastructure Engineer"], note: "Network, cloud, managed services" },
+    { name: "VNG Cloud", roles: ["SRE", "Cloud Engineer"], note: "Cloud platform and operations" },
+    { name: "NashTech", roles: ["DevOps Engineer", "Cloud Engineer"], note: "Global delivery, enterprise systems" },
+  ],
+};
+
 export default function MarketPage() {
   const [domains, setDomains] = useState<Domain[]>(DEFAULT_DOMAINS);
   const [selected, setSelected] = useState<Domain | null>(DEFAULT_DOMAINS[0]);
@@ -97,6 +128,7 @@ export default function MarketPage() {
 
   const meta = selected ? (DOMAIN_META[selected.id] || DOMAIN_META.web) : DOMAIN_META.web;
   const demandColor = selected ? (DEMAND_COLOR[selected.demand] || "var(--accent-teal)") : "var(--accent-teal)";
+  const companyReferences = selected ? (COMPANY_REFERENCES[selected.id] || []) : [];
 
   return (
     <div className="page-content fade-in">
@@ -234,6 +266,34 @@ export default function MarketPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Company references */}
+            <div className="card">
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                Công ty tham khảo
+              </div>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 14 }}>
+                Một số công ty thường có nhu cầu hoặc từng tuyển các vị trí liên quan. Nên kiểm tra trang tuyển dụng chính thức để xem job đang mở.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+                {companyReferences.map((company) => (
+                  <div key={company.name} style={{
+                    padding: "12px 14px",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    background: "var(--bg-card)",
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{company.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 5, lineHeight: 1.5 }}>
+                      {company.roles.join(", ")}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6, lineHeight: 1.5 }}>
+                      {company.note}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

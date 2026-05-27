@@ -321,9 +321,6 @@ export default function AssessmentResultPage() {
         >
           {generatingRoadmap ? "Đang tạo roadmap..." : "Tạo Roadmap Cá Nhân Hóa"}
         </button>
-        <Link href="/projects" className="btn btn-outline" style={{ padding: "12px 24px", fontSize: 14 }}>
-          Khám phá Mini Projects
-        </Link>
         <Link href="/dashboard" className="btn btn-outline" style={{ padding: "12px 24px", fontSize: 14 }}>
           Về Dashboard
         </Link>
