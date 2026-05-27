@@ -1,5 +1,3 @@
-# SkillBridge Frontend — vercel.json
-# Next.js is auto-detected, this file only customises headers & redirects.
 {
   "headers": [
     {
